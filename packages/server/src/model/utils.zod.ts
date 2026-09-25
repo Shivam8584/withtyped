@@ -7,7 +7,7 @@ const typeToGuard = Object.freeze({
   boolean: z.boolean(),
   number: z.number(),
   string: z.string(),
-  json: z.record(z.unknown()).or(z.array(z.unknown())),
+  json: z.record(z.string(), z.unknown()).or(z.array(z.unknown())),
   date: z.date(),
 } satisfies Record<PrimitiveType, ZodType>);
 
@@ -47,13 +47,16 @@ export const convertConfigToZod = (
         return readonly
           ? z
               .undefined()
+              // Zod 4 only lets an object key be absent when its schema is optional; a bare
+              // `undefined()` would make the key required.
+              .optional()
               // eslint-disable-next-line @typescript-eslint/no-unsafe-return
               .transform(() => (typeof defaultValue === 'function' ? defaultValue() : defaultValue))
           : parser.default(defaultValue);
       }
 
       if (extendedConfig?.readonly) {
-        return z.undefined();
+        return z.undefined().optional();
       }
 
       if (config.hasDefault) {
@@ -65,7 +68,7 @@ export const convertConfigToZod = (
 
     case 'patch': {
       if (extendedConfig?.readonly) {
-        return z.undefined();
+        return z.undefined().optional();
       }
 
       return parser.optional();
